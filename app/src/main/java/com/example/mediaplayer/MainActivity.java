@@ -4,9 +4,11 @@ import android.content.Intent;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,45 +17,44 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.concurrent.TimeUnit;
+import java.util.Objects;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity
         implements MediaPlayer.OnCompletionListener, SeekBar.OnSeekBarChangeListener{
 
-    private Button mPlay;
-    private Button mSkip;
-    private Button mPrevious;
+    private ImageButton mPlay;
     private TextView mTitle;
     private TextView mLength;
     private TextView mCurrentDuration;
 
     private MediaPlayer mediaPlayer;
     private Handler myHandler = new Handler();
-    private AudioModel audioModel;
     private SeekBar mSeekBar;
     private int currentIndex = 0;
+    private boolean isRepeatON = false;
+    private boolean isShuffleON = false;
 
-    private static final String TAG = "MainActivity";
-
-    private ArrayList<HashMap<String, String>> songsList = new ArrayList<HashMap<String, String>>();
+    private ArrayList<Song> songsList = new ArrayList<>();
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         // Initialize references to the Views
-        mPlay = (Button) findViewById(R.id.play);
-        mSkip = (Button) findViewById(R.id.skip);
-        mPrevious = (Button) findViewById(R.id.previous);
+        mPlay = (ImageButton) findViewById(R.id.play);
+        ImageButton mSkip = (ImageButton) findViewById(R.id.skip);
+        ImageButton mPrevious = (ImageButton) findViewById(R.id.previous);
+        Button mReplay = (Button) findViewById(R.id.replay);
+        Button mShuffle = (Button) findViewById(R.id.shuffle);
         mTitle = (TextView) findViewById(R.id.title);
         mLength = (TextView) findViewById(R.id.length);
         mCurrentDuration = (TextView) findViewById(R.id.currentTime);
         mSeekBar = (SeekBar) findViewById(R.id.seekBar);
+        ListView mListView = (ListView) findViewById(R.id.playList);
 
         mediaPlayer = new MediaPlayer();
-        audioModel = new AudioModel();
+        AudioModel audioModel = new AudioModel();
 
         mSeekBar.setOnSeekBarChangeListener(this);
         mediaPlayer.setOnCompletionListener(this);
@@ -71,15 +72,12 @@ public class MainActivity extends AppCompatActivity
                 if (mediaPlayer.isPlaying()) {
                     if (mediaPlayer != null) {
                         mediaPlayer.pause();
-                        mPlay.setText("Play");
-                        // change the pause btn to play btn
+                        mPlay.setImageResource(R.mipmap.play_btn);
                     }
                 } else {
                     if (mediaPlayer != null) {
                         mediaPlayer.start();
-                        mPlay.setText("Pause");
-
-                        // change the play btn to pause btn
+                        mPlay.setImageResource(R.mipmap.pause_btn);
                     }
                 }
             }
@@ -95,12 +93,12 @@ public class MainActivity extends AppCompatActivity
                 //plays nxt song in list, if there is one
                 if (currentIndex < (songsList.size() - 1)) {
                     playSong(currentIndex + 1);
-                    mPlay.setText("Pause");
+                    mPlay.setImageResource(R.mipmap.pause_btn);
                     currentIndex = currentIndex + 1;
                 } else {
                     // plays the first song, if no nxt song in list
                     playSong(0);
-                    mPlay.setText("Pause");
+                    mPlay.setImageResource(R.mipmap.pause_btn);
                     currentIndex = 0;
                 }
             }
@@ -116,14 +114,88 @@ public class MainActivity extends AppCompatActivity
                 //play's previous song
                 if (currentIndex > 0) {
                     playSong(currentIndex - 1);
-                    mPlay.setText("Pause");
+                    mPlay.setImageResource(R.mipmap.pause_btn);
                     currentIndex = currentIndex - 1;
                 } else {
-                    //plays last song in the list, if first song is playin
+                    //plays last song in the list, if first song is playing
                     playSong(songsList.size() - 1);
-                    mPlay.setText("Pause");
+                    mPlay.setImageResource(R.mipmap.pause_btn);
                     currentIndex = songsList.size() - 1;
                 }
+            }
+        });
+
+        /**
+         * Replay Button
+         * Replay's the current song when it finishes playing
+         */
+        mReplay.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (isRepeatON) {
+                    isRepeatON = false;
+                    Toast.makeText(getApplicationContext(),"Repeat is OFF", Toast.LENGTH_SHORT).show();
+
+                    /*
+                     * TODO:
+                     *  change img to repeat OFF
+                     */
+                } else {
+                    isRepeatON = true;
+                    Toast.makeText(getApplicationContext(), "Repeat is ON", Toast.LENGTH_SHORT).show();
+                    isShuffleON = false;
+
+                    /*
+                     * TODO:
+                     *  change img to selected/ON
+                     *  set shuffle img to NOT selected
+                     */
+                }
+            }
+        });
+
+        /**
+         * Shuffle Button
+         * Plays a random Song from songlist when the
+         * current song finishes playing.
+         */
+        mShuffle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (isShuffleON) {
+                    isShuffleON = false;
+                    Toast.makeText(getApplicationContext(), "Shuffle is OFF", Toast.LENGTH_SHORT).show();
+
+                    /*
+                     * TODO:
+                     *  change img to shuffle OFF
+                     */
+                } else {
+                    isShuffleON = true;
+                    Toast.makeText(getApplicationContext(), "Shuffle is ON", Toast.LENGTH_SHORT).show();
+                    isRepeatON = false;
+                    /*
+                     * TODO:
+                     *  set img to shuffle ON
+                     *  set img to repeat OFF
+                     */
+                }
+            }
+        });
+
+
+        /**
+         * Playlist adapter to display the
+         * list of songs
+         */
+        PlayListAdapter adapter = new PlayListAdapter(this,songsList,currentIndex);
+        mListView.setAdapter(adapter);
+
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+                currentIndex = position;
+                playSong(currentIndex);
             }
         });
 
@@ -136,11 +208,11 @@ public class MainActivity extends AppCompatActivity
     private void playSong(int songIndex) {
         try {
             mediaPlayer.reset();
-            mediaPlayer.setDataSource(songsList.get(songIndex).get("path"));
+            mediaPlayer.setDataSource(songsList.get(songIndex).getPath());
             mediaPlayer.prepare();
             mediaPlayer.start();
 
-            String title = songsList.get(songIndex).get("title");
+            String title = songsList.get(songIndex).getTitle();
             mTitle.setText(title);
 
             mSeekBar.setProgress(0);
@@ -156,7 +228,7 @@ public class MainActivity extends AppCompatActivity
                                     int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if(resultCode == 100){
-            currentIndex = data.getExtras().getInt("songIndex");
+            currentIndex = Objects.requireNonNull(data.getExtras()).getInt("songIndex");
             // play selected song
             playSong(currentIndex);
         }
@@ -175,10 +247,8 @@ public class MainActivity extends AppCompatActivity
             long totalLength = mediaPlayer.getDuration();
             long currentDuration = mediaPlayer.getCurrentPosition();
 
-
             mLength.setText(milliSecondToTimer(totalLength));
             mCurrentDuration.setText(milliSecondToTimer(currentDuration));
-
 
             int progress = (int) progressPercentage(currentDuration, totalLength);
             mSeekBar.setProgress(progress);
@@ -188,14 +258,12 @@ public class MainActivity extends AppCompatActivity
 
     /**
      * convert milliseconds to to Hours:Minutes:Seconds
-     * @param milliseconds
+     * @param milliseconds - given time to convert
      * @return Hours:Minutes:Seconds
      */
     public String milliSecondToTimer(long milliseconds) {
         String finalString = "";
-        String secondString = "";
-
-
+        String secondString;
 
         //convert total duration into time
         int hours = (int) (milliseconds / (1000*60*60));
@@ -220,12 +288,12 @@ public class MainActivity extends AppCompatActivity
 
     /**
      * Progress Percentage
-     * @param currentDuration
-     * @param totalDuration
+     * @param currentDuration - Current duration of the song.
+     * @param totalDuration - the total length of the song.
      * @return percentage of progressBar
      */
     public int progressPercentage(long currentDuration, long totalDuration) {
-        Double percentage = (double) 0;
+        double percentage;
 
         long currentSeconds = (int) (currentDuration / 1000);
         long totalSeconds = (int) (totalDuration / 1000);
@@ -234,17 +302,17 @@ public class MainActivity extends AppCompatActivity
         percentage = (((double)currentSeconds)/totalSeconds) * 100;
 
         //return percentage
-        return percentage.intValue();
+        return (int) percentage;
     }
 
     /**
      * change progress to timer
-     * @param progress
-     * @param totalDuration
+     * @param progress - The current progress of the song.
+     * @param totalDuration - the total length of the song.
      * @return duration in milliseconds
      */
     public int progressToTimer(int progress, int totalDuration) {
-        int currentDuration = 0;
+        int currentDuration;
         totalDuration = (int) (totalDuration / 1000);
         currentDuration = (int) ((((double)progress)/100) * totalDuration);
 
@@ -253,22 +321,33 @@ public class MainActivity extends AppCompatActivity
     }
 
 
+
     //Implementation Methods
 
     /**
      * When songs finishes playing
-     * @param mediaPlayer
+     * @param mediaPlayer - the media player Object
      */
     @Override
     public void onCompletion(MediaPlayer mediaPlayer) {
-        //play nxt song
-        if (currentIndex < (songsList.size() -1)) {
-            playSong(currentIndex + 1);
-            currentIndex = currentIndex + 1;
+
+        //check if repeat is ON or not
+        if (isRepeatON) {
+            playSong(currentIndex);
+        } else if (isShuffleON) {
+            Random randomNumber = new Random();
+            currentIndex = randomNumber.nextInt(songsList.size());
+            playSong(currentIndex);
         } else {
-            // first song
-            playSong(0);
-            currentIndex = 0;
+            //play nxt song
+            if (currentIndex < (songsList.size() -1)) {
+                playSong(currentIndex + 1);
+                currentIndex = currentIndex + 1;
+            } else {
+                // first song
+                playSong(0);
+                currentIndex = 0;
+            }
         }
     }
 
@@ -279,7 +358,7 @@ public class MainActivity extends AppCompatActivity
 
     /**
      * wen user starts moving the seek bar
-     * @param seekBar
+     * @param seekBar -
      */
     @Override
     public void onStartTrackingTouch(SeekBar seekBar) {
@@ -288,7 +367,7 @@ public class MainActivity extends AppCompatActivity
 
     /**
      * wen user stops moving the seek barr
-     * @param seekBar
+     * @param seekBar -
      */
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {

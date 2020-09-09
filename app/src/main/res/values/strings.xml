@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">MediaPlayer</string>
+    <string name="app_name">CryoPlayer</string>
+    <string name="NoTime">--:--</string>
+    <string name="not_playing">Not Playing</string>
+    <string name="replay">Replay</string>
+    <string name="shuffle">Shuffle</string>
 </resources>
